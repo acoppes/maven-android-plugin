@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Enumeration;
+import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -34,6 +35,7 @@ import org.codehaus.plexus.util.IOUtil;
 
 import com.jayway.maven.plugins.android.AbstractAndroidMojo;
 import com.jayway.maven.plugins.android.CommandExecutor;
+import com.jayway.maven.plugins.android.utils.ArtifactOutputFolderBuilder;
 
 /**
  * unpack library.
@@ -44,59 +46,70 @@ import com.jayway.maven.plugins.android.CommandExecutor;
  * @requiresDependencyResolution compile
  */
 public class UnpackMojo extends AbstractAndroidMojo {
-	public void execute() throws MojoExecutionException, MojoFailureException {
+	
+	private ArtifactOutputFolderBuilder artifactOutputFolderBuilder;
 
+	public void execute() throws MojoExecutionException, MojoFailureException {
 		CommandExecutor executor = CommandExecutor.Factory
 				.createDefaultCommmandExecutor();
 		executor.setLogger(this.getLog());
+		
+//		if (getLog().isInfoEnabled()) 
+//			getLog().info("project artifact: " + project.getArtifact().getFile().getAbsolutePath());
 
-		File inputFile = new File(project.getBuild().getDirectory()
-				+ File.separator + project.getBuild().getFinalName() + ".jar");
-
+		artifactOutputFolderBuilder = new ArtifactOutputFolderBuilder(project, "dependencies");
+		
 		if (generateApk) {
 			// Unpack all dependent and main classes
-			unpackClasses(inputFile);
+			unpackClasses();
 		}
 	}
+	
+	private void unpackClasses() throws MojoExecutionException {
+		Set<Artifact> artifacts = getRelevantCompileArtifacts();
+		
+		for (Artifact artifact : artifacts) 
+			unpackArtifact(artifact);
+		
+		unpackArtifact(project.getArtifact());
+	}
 
-	private File unpackClasses(File inputFile) throws MojoExecutionException {
-		File outputDirectory = new File(project.getBuild().getDirectory(),
-				"android-classes");
-		for (Artifact artifact : getRelevantCompileArtifacts()) {
+	protected void unpackArtifact(Artifact artifact) throws MojoExecutionException {
+		File outputDirectory = artifactOutputFolderBuilder.generateOutputFolder(artifact);
+		
+		if (artifact.isRelease()  && outputDirectory.exists()) {
+			if (getLog().isInfoEnabled()) 
+				getLog().info(artifact.getArtifactId() + " already unpacked in " + outputDirectory.getAbsolutePath());
+			return;
+		}
+		
+		if (getLog().isInfoEnabled()) 
+			getLog().info("unpacking " + artifact.getArtifactId() + " to " + outputDirectory.getAbsolutePath());
+		
+		// it will always unpack for SNAPSHOT artifacts, but it will try to reuse already unpacked folders for other dependencies. 
 
-			if (artifact.getFile().isDirectory()) {
-				try {
-					FileUtils
-							.copyDirectory(artifact.getFile(), outputDirectory);
-				} catch (IOException e) {
-					throw new MojoExecutionException(
-							"IOException while copying "
-									+ artifact.getFile().getAbsolutePath()
-									+ " into "
-									+ outputDirectory.getAbsolutePath(), e);
-				}
-			} else {
-				try {
-					unjar(new JarFile(artifact.getFile()), outputDirectory);
-				} catch (IOException e) {
-					throw new MojoExecutionException(
-							"IOException while unjarring "
-									+ artifact.getFile().getAbsolutePath()
-									+ " into "
-									+ outputDirectory.getAbsolutePath(), e);
-				}
+		if (artifact.getFile().isDirectory()) {
+			try {
+				FileUtils
+						.copyDirectory(artifact.getFile(), outputDirectory);
+			} catch (IOException e) {
+				throw new MojoExecutionException(
+						"IOException while copying "
+								+ artifact.getFile().getAbsolutePath()
+								+ " into "
+								+ outputDirectory.getAbsolutePath(), e);
 			}
-
+		} else {
+			try {
+				unjar(new JarFile(artifact.getFile()), outputDirectory);
+			} catch (IOException e) {
+				throw new MojoExecutionException(
+						"IOException while unjarring "
+								+ artifact.getFile().getAbsolutePath()
+								+ " into "
+								+ outputDirectory.getAbsolutePath(), e);
+			}
 		}
-
-		try {
-			unjar(new JarFile(inputFile), outputDirectory);
-		} catch (IOException e) {
-			throw new MojoExecutionException("IOException while unjarring "
-					+ inputFile.getAbsolutePath() + " into "
-					+ outputDirectory.getAbsolutePath(), e);
-		}
-		return outputDirectory;
 	}
 
 	private void unjar(JarFile jarFile, File outputDirectory)

@@ -38,7 +38,10 @@ public class ArtifactOutputFolderBuilderTest {
 			{
 				oneOf(artifact).getArtifactId();
 				will(returnValue("artifact"));
-				
+
+				oneOf(artifact).getVersion();
+				will(returnValue("0.0.1"));
+
 				oneOf(mavenProject).getBuild();
 				will(returnValue(build));
 				
@@ -52,7 +55,7 @@ public class ArtifactOutputFolderBuilderTest {
 		File artifactOutputFolder = builder.generateOutputFolder(artifact);
 		
 		assertThat(artifactOutputFolder, IsNull.notNullValue());
-		assertThat(artifactOutputFolder.getAbsolutePath(), IsEqual.equalTo(tmpFolder + "/target/dependencies/artifact/classes"));
+		assertThat(artifactOutputFolder.getAbsolutePath(), IsEqual.equalTo(tmpFolder + "/target/dependencies/artifact/0.0.1/classes"));
 		
 	}
 	

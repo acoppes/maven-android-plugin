@@ -6,9 +6,9 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.project.MavenProject;
 
 public class ArtifactOutputFolderBuilder {
-	
+
 	private final MavenProject mavenProject;
-	
+
 	private final String dependenciesDirectory;
 
 	public ArtifactOutputFolderBuilder(MavenProject mavenProject, String dependenciesDirectory) {
@@ -17,7 +17,9 @@ public class ArtifactOutputFolderBuilder {
 	}
 
 	public File generateOutputFolder(Artifact artifact) {
-		return new File(mavenProject.getBuild().getDirectory(), dependenciesDirectory + File.separator + artifact.getArtifactId() + File.separator + "classes");
+		return new File(mavenProject.getBuild().getDirectory(), //
+				dependenciesDirectory + File.separator + artifact.getArtifactId() + File.separator + //
+						artifact.getVersion() + File.separator + "classes");
 	}
-	
+
 }
