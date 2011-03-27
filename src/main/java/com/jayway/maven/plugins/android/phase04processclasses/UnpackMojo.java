@@ -54,18 +54,45 @@ public class UnpackMojo extends AbstractAndroidMojo {
 				.createDefaultCommmandExecutor();
 		executor.setLogger(this.getLog());
 		
-//		if (getLog().isInfoEnabled()) 
-//			getLog().info("project artifact: " + project.getArtifact().getFile().getAbsolutePath());
-
 		artifactOutputFolderBuilder = new ArtifactOutputFolderBuilder(project, "dependencies");
 		
 		if (generateApk) {
 			// Unpack all dependent and main classes
-			unpackClasses();
+			unpackArtifactClasses();
+			mergeUnpackedClasses(new File(project.getBuild().getDirectory(), "android-classes"));
 		}
 	}
 	
-	private void unpackClasses() throws MojoExecutionException {
+	private void mergeUnpackedClasses(File directory) throws MojoExecutionException {
+		Set<Artifact> artifacts = getRelevantCompileArtifacts();
+		
+		for (Artifact artifact : artifacts) 
+			mergeUnpackedClasses(artifact, directory);
+		
+		mergeUnpackedClasses(project.getArtifact(), directory);
+	}
+
+	private void mergeUnpackedClasses(Artifact artifact, File targetDirectory) throws MojoExecutionException {
+		
+		File sourceDirectory = artifactOutputFolderBuilder.generateOutputFolder(artifact);
+		
+		try {
+			
+			if (getLog().isInfoEnabled()) 
+				getLog().info("merging " + sourceDirectory.getAbsolutePath() + " into " + targetDirectory.getAbsolutePath());
+			
+			FileUtils.copyDirectory(sourceDirectory, targetDirectory);
+		} catch (IOException e) {
+			throw new MojoExecutionException(
+					"IOException while mergin classes from "
+							+ sourceDirectory.getAbsolutePath()
+							+ " into "
+							+ targetDirectory.getAbsolutePath(), e);
+		}
+		
+	}
+
+	private void unpackArtifactClasses() throws MojoExecutionException {
 		Set<Artifact> artifacts = getRelevantCompileArtifacts();
 		
 		for (Artifact artifact : artifacts) 
