@@ -77,7 +77,7 @@ public class UnpackMojo extends AbstractAndroidMojo {
 	protected void unpackArtifact(Artifact artifact) throws MojoExecutionException {
 		File outputDirectory = artifactOutputFolderBuilder.generateOutputFolder(artifact);
 		
-		if (artifact.isRelease()  && outputDirectory.exists()) {
+		if (!artifact.isSnapshot()  && outputDirectory.exists()) {
 			if (getLog().isInfoEnabled()) 
 				getLog().info(artifact.getArtifactId() + " already unpacked in " + outputDirectory.getAbsolutePath());
 			return;
